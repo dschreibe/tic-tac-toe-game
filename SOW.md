@@ -36,7 +36,6 @@ The goal of this project is to create a game/program that can simulate a two pla
 - Complete rough draft of game (10/27)
 - Fix minor bug issues and optimize gameplay and visibility for final draft (11/7)
 - Complete final draft (11/21)
-- [Outline the major milestones or checkpoints throughout the project, with estimated completion dates.]
 
 ### Task Breakdown:
 - Create game rules python code (3-5 hours)
@@ -46,23 +45,34 @@ The goal of this project is to create a game/program that can simulate a two pla
 - Put code together to complete rough draft (2-4 hours)
 - Fixing bugs and optimizing speed and visuals (2-4 hours)
 - Polishing and submitting final draft (2-4 hours)
-- [Create a detailed breakdown of tasks, assigning estimated hours or days to each.]
 
 ## Technical Requirements:
 ### Hardware:
-- [Specify any hardware requirements, such as servers, networking equipment, or specific devices.]
+- The game will require a server and two clients
+- The hardware can be low power, with the only requirement being that they have an internet connection and run Python
+- The server can also run on one of the clients instead
+- One computer can run both clients and servers if necessary but can also be used across computers
 
 ### Software:
-- [List the necessary software tools, programming languages (Python), libraries (socket, threading, etc.), and operating systems.]
+- Python main programming language
+- Any operating system then runs Python will work with our game
+- For our game, we will be testing it on Linux, Mac, and Windows
+- The project will utilize Python Sockets to connect the two clients
 
 ## Assumptions:
-- [State any assumptions that are being made about the project, such as network connectivity or availability of resources.]
+- We assume the players and servers will have Python installed
+- We assume the players understand the rules on tic tac toe
+- We assume the players have an internet connection
 
 ## Roles and Responsibilities:
-- [Define the roles of team members, including project manager, developers, testers, etc., and their responsibilities.]
+- This project only has two members meaning we will have to take on multiple tasks
+- Both members will create code for the project and test their code before making a pull request
+- Each member will check the other members work to ensure the code is working
 
 ## Communication Plan:
-- [Outline the communication channels and frequency for project updates, meetings, and decision-making.]
+- The communication plan is to talk directly to each other to ensure we both understand the requirements of the project
+- Before deadlines, we will both outline what we expect from each other to make sure work is evenly divded
+- We also plan to ensure to communicate any possible delays or difficulties to help each other out
 
 ## Additional Notes:
-- [Include any other relevant information or considerations that are specific to your project.]
+- If we have more time, we can also work on creating a more graphical experience to improve the user experience while playing our game
