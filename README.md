@@ -8,6 +8,8 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 **Technologies used:**
 * Python
 * Sockets
+* Threading
+* Logging
 
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
