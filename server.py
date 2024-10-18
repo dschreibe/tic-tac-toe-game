@@ -1,6 +1,7 @@
 import socket
 import threading
 import logging
+import sys
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s') # make logging more readable
 
@@ -8,6 +9,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s') # ma
 HOST = '127.0.0.1'
 PORT = 65432
 RUNNING = True       
+
+def handle_arguments():
+    global PORT
+    global HOST
+    n = len(sys.argv)
+    print(n)
+    for i in range(1, n):
+        arg = sys.argv[i]
+        print(arg)
+        if arg == "-h":
+            print("-h for a list of server commands")
+            print("-i Host-IP")
+            print("-p Host-Port")
+        elif arg == "-i":
+            ip = sys.argv[i+1] # later add check to make sure they specify a valid ip
+            HOST = ip
+        elif arg == "-p":
+            port = int(sys.argv[i+1]) # later add check to make sure they specify a valid port
+            PORT = port
 
 def handle_client(conn, addr):
     logging.info(f"New connection from {addr}")
@@ -49,4 +69,5 @@ def start_server():
         server_socket.close()
 
 if __name__ == "__main__":
+    handle_arguments()
     start_server()
