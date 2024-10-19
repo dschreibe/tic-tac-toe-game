@@ -20,8 +20,8 @@ def handle_arguments():
         if arg == "-h":
             print("Usage:")
             print("-h              Show this help message")
-            print("-i Host-IP      Set the host IP address")
-            print("-p Host-Port    Set the host port number")
+            print("-i Host-IP      Set the host IP address (default: 127.0.0.1)")
+            print("-p Host-Port    Set the host port number (default: 65432)")
             sys.exit(0)
         elif arg == "-i":
             if i + 1 < n:
