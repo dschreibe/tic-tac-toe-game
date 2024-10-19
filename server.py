@@ -14,20 +14,44 @@ def handle_arguments():
     global PORT
     global HOST
     n = len(sys.argv)
-    print(n)
-    for i in range(1, n):
+    i = 1
+    while i < n:
         arg = sys.argv[i]
-        print(arg)
         if arg == "-h":
-            print("-h for a list of server commands")
-            print("-i Host-IP")
-            print("-p Host-Port")
+            print("Usage:")
+            print("-h              Show this help message")
+            print("-i Host-IP      Set the host IP address")
+            print("-p Host-Port    Set the host port number")
+            sys.exit(0)
         elif arg == "-i":
-            ip = sys.argv[i+1] # later add check to make sure they specify a valid ip
-            HOST = ip
+            if i + 1 < n:
+                ip = sys.argv[i + 1]
+                HOST = ip
+                i += 1
+            else:
+                print("Error: -i requires an IP address")
+                sys.exit(1)
         elif arg == "-p":
-            port = int(sys.argv[i+1]) # later add check to make sure they specify a valid port
-            PORT = port
+            if i + 1 < n:
+                try:
+                    port = int(sys.argv[i + 1])
+                    if 1 <= port <= 65535:
+                        PORT = port
+                    else:
+                        print("Error: Port number must be between 1 and 65535")
+                        sys.exit(1)
+                except ValueError:
+                    print("Error: Port must be an integer")
+                    sys.exit(1)
+                i += 1
+            else:
+                print("Error: -p requires a port number")
+                sys.exit(1)
+        else:
+            print(f"Error: Unknown argument '{arg}'")
+            print("Use -h for help")
+            sys.exit(1)
+        i += 1
 
 def handle_client(conn, addr):
     logging.info(f"New connection from {addr}")
