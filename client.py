@@ -1,6 +1,7 @@
 import socket
 import logging
 import sys
+import json
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -61,6 +62,54 @@ def handle_arguments():
         print("Error: -i (IP address) is required")
         sys.exit(1)
 
+def send_message(client_socket, message_type, data):
+    message = {
+        "type": message_type,
+        "data": data
+    }
+    client_socket.sendall(json.dumps(message).encode('utf-8'))
+
+def handle_server_response(client_socket):
+    while True:
+        response = client_socket.recv(1024)
+        if not response:
+            logging.info("Connection closed by server.")
+            return False
+
+        message = json.loads(response.decode('utf-8'))
+        handle_message(message)
+        
+        # Exit loop after processing message to allow for new input
+        if message["type"] in ["move_ack", "error", "game_result", "chat"]:
+            break
+    return True
+
+
+def handle_message(message):
+    if message["type"] == "game_update":
+        board = message["data"]["board"]
+        next_turn = message["data"]["next_turn"]
+        status = message["data"]["status"]
+        logging.info(f"Board: {board}")
+        logging.info(f"Next turn: {next_turn}")
+        logging.info(f"Game status: {status}")
+
+    elif message["type"] == "move_ack":
+        logging.info(message["data"]["message"])
+
+    elif message["type"] == "error":
+        logging.error(message["data"]["message"])
+
+    elif message["type"] == "game_result":
+        logging.info(f"Game result: {message['data']['result']}")
+        if message['data']['result'] == "win":
+            logging.info(f"Winner: {message['data']['winner']}")
+
+    elif message["type"] == "chat":
+        username = message["data"]["username"]
+        chat_message = message["data"]["message"]
+        logging.info(f"{username}: {chat_message}")
+
 def connect_to_server():
     try:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,16 +117,41 @@ def connect_to_server():
         logging.info(f"Connected to server at {HOST}:{PORT}")
 
         while True:
-            message = input("Enter message to send: ")
+            message = input("Enter message type (join/move/chat/quit) or 'exit' to disconnect: ")
             if message.lower() == 'exit':
                 break
-            client_socket.sendall(message.encode('utf-8'))
 
-            response = client_socket.recv(1024)
-            if not response:
-                logging.info("Connection closed by server.")
+            if message == "join":
+                username = input("Enter your username: ")
+                send_message(client_socket, "join", {"username": username})
+                if not handle_server_response(client_socket):
+                    break
+
+            elif message == "move":
+                username = input("Enter your username: ")
+                row = int(input("Enter row (0-2): "))
+                col = int(input("Enter column (0-2): "))
+                send_message(client_socket, "move", {"username": username, "position": {"row": row, "col": col}})
+                if not handle_server_response(client_socket):
+                    break
+
+            elif message == "chat":
+                username = input("Enter your username: ")
+                chat_message = input("Enter your message: ")
+                send_message(client_socket, "chat", {"username": username, "message": chat_message})
+                if not handle_server_response(client_socket):
+                    break
+
+            elif message == "quit":
+                username = input("Enter your username: ")
+                send_message(client_socket, "quit", {"username": username})
+                if not handle_server_response(client_socket):
+                    break
                 break
-            logging.info(f"Received from server: {response.decode('utf-8')}")
+
+            else:
+                logging.error("Unknown message type. Please enter a valid command.")
+
     except ConnectionRefusedError:
         logging.error("Connection failed. Server may be unavailable.")
     except socket.error as e:
