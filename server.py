@@ -99,6 +99,8 @@ def handle_message(conn, message):
 def handle_join(conn, username):
     if not username or username in usernames:
         send_message(conn, "error", {"message": "Invalid or duplicate username."})
+    elif len(usernames) == 2:
+        send_message(conn, "error", {"message": "Game already started between two players"})
     else:
         usernames.add(username)
         game_state["next_turn"] = game_state["next_turn"] or username
@@ -114,14 +116,18 @@ def handle_move(conn, username, position):
         return
     row, col = position["row"], position["col"]
     if not (0 <= row < 3 and 0 <= col < 3) or game_state["board"][row][col] != "":
-        send_message(conn, "error", {"message": "Invalid or occupied move position."})
+        send_message(conn, "error", {"message": "Invalid or occupied move position. Redo your move"})
         return
     if game_state["next_turn"] != username:
         send_message(conn, "error", {"message": "It's not your turn."})
         return
 
-    game_state["board"][row][col] = "X" if username == game_state["next_turn"] else "O"
-    game_state["next_turn"] = "player2" if username == "player1" else "player1"
+    game_state["board"][row][col] = "X" if username == game_state["next_turn"] else "O" # need to be changed
+    # There is probably a way better way of doing this
+    for name in usernames:
+        if name != username:
+            game_state["next_turn"] = name
+            
     update_all_clients()
     check_game_status()
 
