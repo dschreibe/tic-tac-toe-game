@@ -112,7 +112,12 @@ def handle_move(conn, username, position):
     if username not in usernames:
         send_message(conn, "error", {"message": "Username not recognized."})
         return
-
+    
+    # Check if exactly 2 players have joined
+    if len(usernames) != 2:
+        send_message(conn, "error", {"message": f"Invalid number of players. Currently, there are {len(usernames)} player(s). Please wait for another player to join or use the join command."})
+        return
+    
     # Check if position is valid
     if not position or "row" not in position or "col" not in position:
         send_message(conn, "error", {"message": "Invalid move position."})

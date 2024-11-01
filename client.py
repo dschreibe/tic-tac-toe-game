@@ -2,6 +2,7 @@ import socket
 import logging
 import sys
 import json
+import threading
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -71,19 +72,18 @@ def send_message(client_socket, message_type, data):
 
 def handle_server_response(client_socket):
     while True:
-        response = client_socket.recv(1024)
-        if not response:
-            logging.info("Connection closed by server.")
-            return False
+        try:
+            response = client_socket.recv(1024)
+            if not response:
+                logging.info("Connection closed by server.")
+                break
 
-        message = json.loads(response.decode('utf-8'))
-        handle_message(message)
-        
-        # Exit loop after processing message to allow for new input
-        if message["type"] in ["move_ack", "error", "game_result", "chat"]:
+            message = json.loads(response.decode('utf-8'))
+            print()
+            handle_message(message)
+        except socket.error as e:
+            logging.error(f"Socket error: {e}")
             break
-    return True
-
 
 def handle_message(message):
     if message["type"] == "game_update":
@@ -116,6 +116,11 @@ def connect_to_server():
         client_socket.connect((HOST, PORT))
         logging.info(f"Connected to server at {HOST}:{PORT}")
 
+        # Start a thread to listen for server responses
+        listener_thread = threading.Thread(target=handle_server_response, args=(client_socket,))
+        listener_thread.daemon = True
+        listener_thread.start()
+
         while True:
             message = input("Enter message type (join/move/chat/quit) or 'exit' to disconnect: ")
             if message.lower() == 'exit':
@@ -124,29 +129,21 @@ def connect_to_server():
             if message == "join":
                 username = input("Enter your username: ")
                 send_message(client_socket, "join", {"username": username})
-                if not handle_server_response(client_socket):
-                    break
 
             elif message == "move":
                 username = input("Enter your username: ")
                 row = int(input("Enter row (0-2): "))
                 col = int(input("Enter column (0-2): "))
                 send_message(client_socket, "move", {"username": username, "position": {"row": row, "col": col}})
-                if not handle_server_response(client_socket):
-                    break
 
             elif message == "chat":
                 username = input("Enter your username: ")
                 chat_message = input("Enter your message: ")
                 send_message(client_socket, "chat", {"username": username, "message": chat_message})
-                if not handle_server_response(client_socket):
-                    break
 
             elif message == "quit":
                 username = input("Enter your username: ")
                 send_message(client_socket, "quit", {"username": username})
-                if not handle_server_response(client_socket):
-                    break
                 break
 
             else:
