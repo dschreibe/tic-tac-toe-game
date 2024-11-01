@@ -1,4 +1,3 @@
-# test_game.py
 import unittest
 import socket
 import threading
