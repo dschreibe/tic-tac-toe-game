@@ -108,28 +108,37 @@ def handle_join(conn, username):
         logging.info(f"{username} joined the game.")
 
 def handle_move(conn, username, position):
+    # Check if username is valid
     if username not in usernames:
         send_message(conn, "error", {"message": "Username not recognized."})
         return
+
+    # Check if position is valid
     if not position or "row" not in position or "col" not in position:
         send_message(conn, "error", {"message": "Invalid move position."})
         return
+    
     row, col = position["row"], position["col"]
     if not (0 <= row < 3 and 0 <= col < 3) or game_state["board"][row][col] != "":
         send_message(conn, "error", {"message": "Invalid or occupied move position. Redo your move"})
         return
+    
+    # Ensure it's the player's turn
     if game_state["next_turn"] != username:
         send_message(conn, "error", {"message": "It's not your turn."})
         return
 
-    game_state["board"][row][col] = "X" if username == game_state["next_turn"] else "O" # need to be changed
-    # There is probably a way better way of doing this
-    for name in usernames:
-        if name != username:
-            game_state["next_turn"] = name
-            
+    # Assign symbol based on player turn
+    symbol = "X" if username == list(usernames)[0] else "O"
+    game_state["board"][row][col] = symbol
+
+    # Switch turn to the other player
+    game_state["next_turn"] = [user for user in usernames if user != username][0]
+
     update_all_clients()
     check_game_status()
+
+    send_message(conn, "move_ack", {"message": f"Move accepted for {username} at position ({row}, {col})"})
 
     logging.info(f"{username} made a move at position ({row}, {col})")
 
