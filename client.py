@@ -68,9 +68,10 @@ def send_message(client_socket, message_type, data):
         "type": message_type,
         "data": data
     }
-    client_socket.sendall(json.dumps(message).encode('utf-8'))
+    client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
 
 def handle_server_response(client_socket):
+    buffer = ""
     while True:
         try:
             response = client_socket.recv(1024)
@@ -78,9 +79,18 @@ def handle_server_response(client_socket):
                 logging.info("Connection closed by server.")
                 break
 
-            message = json.loads(response.decode('utf-8'))
-            print()
-            handle_message(message)
+            buffer += response.decode('utf-8')
+
+            while '\n' in buffer:
+                line, buffer = buffer.split('\n', 1)
+                if line:
+                    try:
+                        message = json.loads(line)
+                        print()
+                        handle_message(message)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"JSON decode error: {e} - Line: {line}")
+
         except socket.error as e:
             logging.error(f"Socket error: {e}")
             break
@@ -132,8 +142,15 @@ def connect_to_server():
 
             elif message == "move":
                 username = input("Enter your username: ")
-                row = int(input("Enter row (0-2): "))
-                col = int(input("Enter column (0-2): "))
+                try:
+                    row = int(input("Enter row (0-2): "))
+                    col = int(input("Enter column (0-2): "))
+                except ValueError:
+                    logging.error("Row and Column must be integers between 0 and 2.")
+                    continue
+                if not (0 <= row <= 2 and 0 <= col <= 2):
+                    logging.error("Row and Column must be between 0 and 2.")
+                    continue
                 send_message(client_socket, "move", {"username": username, "position": {"row": row, "col": col}})
 
             elif message == "chat":

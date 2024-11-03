@@ -49,13 +49,21 @@ class TestTicTacToeGame(unittest.TestCase):
         self.client_socket2.close()
 
     def message_listener(self, client_socket, message_queue):
+        buffer = ""
         while True:
             try:
                 data = client_socket.recv(1024)
                 if not data:
                     break
-                message = json.loads(data.decode('utf-8'))
-                message_queue.append(message)
+                buffer += data.decode('utf-8')
+                while '\n' in buffer:
+                    line, buffer = buffer.split('\n', 1)
+                    if line:
+                        try:
+                            message = json.loads(line)
+                            message_queue.append(message)
+                        except json.JSONDecodeError:
+                            print(f"Test listener JSON decode error: {line}")
             except:
                 break
 
@@ -170,6 +178,64 @@ class TestTicTacToeGame(unittest.TestCase):
         self.assertTrue(len(chat_messages2) > 0)
         self.assertEqual(chat_messages1[0]["data"]["message"], "Hello, World!")
         self.assertEqual(chat_messages2[0]["data"]["message"], "Hello, World!")
+
+    def test_win_condition(self):
+        # Join game with two players
+        send_message(self.client_socket1, "join", {"username": "player1"})
+        send_message(self.client_socket2, "join", {"username": "player2"})
+        
+        # Wait for join messages to be processed
+        self.wait_for_messages()
+        self.clear_message_queues()
+
+        moves = [
+            {"socket": self.client_socket1, "username": "player1", "position": {"row": 0, "col": 0}},
+            {"socket": self.client_socket2, "username": "player2", "position": {"row": 1, "col": 0}},
+            {"socket": self.client_socket1, "username": "player1", "position": {"row": 0, "col": 1}},
+            {"socket": self.client_socket2, "username": "player2", "position": {"row": 1, "col": 1}},
+            {"socket": self.client_socket1, "username": "player1", "position": {"row": 0, "col": 2}}
+        ]
+
+        # Execute moves
+        # print(self.client1_messages)
+        # print(self.client2_messages)
+        for move in moves:
+            send_message(move["socket"], "move", {
+                "username": move["username"],
+                "position": move["position"]
+            })
+            # print(self.client1_messages)
+            # print(self.client2_messages)
+            self.wait_for_messages()
+
+        # Wait a bit
+        self.wait_for_messages(timeout=4)
+
+        # Verify that both clients received the game_result message
+        # print(self.client1_messages)
+        # print(self.client2_messages)
+        game_results_client1 = [msg for msg in self.client1_messages if msg["type"] == "game_result"]
+        game_results_client2 = [msg for msg in self.client2_messages if msg["type"] == "game_result"]
+        
+        self.assertTrue(len(game_results_client1) > 0, "Player 1 did not receive game_result message")
+        self.assertTrue(len(game_results_client2) > 0, "Player 2 did not receive game_result message")
+
+        # Check the contents of the game_result message
+        game_result1 = game_results_client1[-1]["data"]
+        game_result2 = game_results_client2[-1]["data"]
+
+        # Assert that both game_result messages indicate a win
+        self.assertEqual(game_result1["result"], "win", "Player 1 game_result does not indicate a win")
+        self.assertEqual(game_result2["result"], "win", "Player 2 game_result does not indicate a win")
+
+        self.assertEqual(game_result1["winner"], "player1", "Player 1 game_result has incorrect winner")
+        self.assertEqual(game_result2["winner"], "player1", "Player 2 game_result has incorrect winner")
+        
+        self.assertEqual(game_result1["symbol"], game_result2["symbol"], "Different game_result symbol from two clients")
+
+        self.assertEqual(game_state["status"], "ongoing", "Game status was not reset after win")
+        self.assertEqual(len(usernames), 0, "Usernames were not cleared after game reset")
+        self.assertEqual(len(clients), 2, "Clients removed")
 
 if __name__ == '__main__':
     unittest.main()

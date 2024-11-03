@@ -62,7 +62,7 @@ def handle_arguments():
 
 def send_message(conn, message_type, data):
     try:
-        message = json.dumps({"type": message_type, "data": data})
+        message = json.dumps({"type": message_type, "data": data}) + '\n'
         conn.sendall(message.encode('utf-8'))
     except socket.error as e:
         logging.error(f"Error sending message: {e}")
@@ -159,6 +159,7 @@ def handle_quit(conn, username):
         usernames.remove(username)
         broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game."})
         logging.info(f"{username} has left the game.")
+        reset_game()
 
 def broadcast_message(message_type, data):
     for client in clients:
@@ -171,29 +172,50 @@ def update_all_clients():
         "status": game_state["status"]
     })
 
+def reset_game():
+    game_state["board"] = [["" for _ in range(3)] for _ in range(3)]
+    game_state["next_turn"] = None
+    game_state["status"] = "ongoing"
+    usernames.clear()
+    logging.info("Game reset")
+
 def check_game_status():
+    # Check rows
     for i in range(3):
         if game_state["board"][i][0] == game_state["board"][i][1] == game_state["board"][i][2] != "":
             end_game(game_state["board"][i][0])
             return
+    
+    # Check columns
+    for i in range(3):
         if game_state["board"][0][i] == game_state["board"][1][i] == game_state["board"][2][i] != "":
             end_game(game_state["board"][0][i])
             return
+    
+    # Check diagonals
     if game_state["board"][0][0] == game_state["board"][1][1] == game_state["board"][2][2] != "":
         end_game(game_state["board"][0][0])
         return
+    
     if game_state["board"][0][2] == game_state["board"][1][1] == game_state["board"][2][0] != "":
         end_game(game_state["board"][0][2])
         return
+    
+    # Check for draw
     if all(cell != "" for row in game_state["board"] for cell in row):
-        game_state["status"] = "draw"
         broadcast_message("game_result", {"result": "draw"})
         logging.info("Game ended in a draw.")
+        reset_game()
 
-def end_game(winner):
-    game_state["status"] = "win"
-    broadcast_message("game_result", {"result": "win", "winner": winner})
-    logging.info(f"Game ended with winner: {winner}")
+def end_game(winner_symbol):
+    winner_username = list(usernames)[0] if winner_symbol == "X" else list(usernames)[1]
+    broadcast_message("game_result", {
+        "result": "win",
+        "winner": winner_username,
+        "symbol": winner_symbol
+    })
+    logging.info(f"Game ended. Winner: {winner_username} ({winner_symbol})")
+    reset_game()
 
 def start_server():
     global RUNNING
