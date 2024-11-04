@@ -215,11 +215,13 @@ def check_game_status():
             end_game(game_state["board"][i][0])
             return
 
+    # Check columns
     for i in range(3):
         if game_state["board"][0][i] == game_state["board"][1][i] == game_state["board"][2][i] != "":
             end_game(game_state["board"][0][i])
             return
 
+    # Check diagonals
     if game_state["board"][0][0] == game_state["board"][1][1] == game_state["board"][2][2] != "":
         end_game(game_state["board"][0][0])
         return
@@ -228,6 +230,7 @@ def check_game_status():
         end_game(game_state["board"][0][2])
         return
 
+    # Check for draw
     if all(cell != "" for row in game_state["board"] for cell in row):
         broadcast_message("game_result", {"result": "draw"})
         logging.info("Game ended in a draw.")
