@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 HOST = None  # Server's IP address or DNS name
 PORT = 65432  # Port the server is listening on
 
+# Parses command-line arguments to set the server's host and port values
 def handle_arguments():
     global HOST
     global PORT
@@ -63,6 +64,7 @@ def handle_arguments():
         print("Error: -i (IP address) is required")
         sys.exit(1)
 
+# Sends a message to the server with a specified type and data payload
 def send_message(client_socket, message_type, data):
     message = {
         "type": message_type,
@@ -70,10 +72,12 @@ def send_message(client_socket, message_type, data):
     }
     client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
 
+# Continuously listens for responses from the server and processes each message
 def handle_server_response(client_socket):
     buffer = ""
     while True:
         try:
+            # Receives data from the server in chunks
             response = client_socket.recv(1024)
             if not response:
                 logging.info("Connection closed by server.")
@@ -81,6 +85,7 @@ def handle_server_response(client_socket):
 
             buffer += response.decode('utf-8')
 
+            # Processes each complete line in the buffer as a separate message
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
                 if line:
@@ -95,6 +100,7 @@ def handle_server_response(client_socket):
             logging.error(f"Socket error: {e}")
             break
 
+# Handles individual messages from the server based on message type
 def handle_message(message):
     if message["type"] == "game_update":
         board = message["data"]["board"]
@@ -120,17 +126,20 @@ def handle_message(message):
         chat_message = message["data"]["message"]
         logging.info(f"{username}: {chat_message}")
 
+# Connects to the server, manages message sending, and listens for commands from the user
 def connect_to_server():
     try:
+        # Creates a TCP socket and connects to the specified server
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((HOST, PORT))
         logging.info(f"Connected to server at {HOST}:{PORT}")
 
-        # Start a thread to listen for server responses
+        # Starts a new thread to handle responses from the server
         listener_thread = threading.Thread(target=handle_server_response, args=(client_socket,))
         listener_thread.daemon = True
         listener_thread.start()
 
+        # Main loop for user input, allowing the user to send various types of messages
         while True:
             message = input("Enter message type (join/move/chat/quit) or 'exit' to disconnect: ")
             if message.lower() == 'exit':
@@ -174,6 +183,7 @@ def connect_to_server():
         client_socket.close()
         logging.info("Disconnected from server.")
 
+# Main entry point for the script: processes command-line arguments and connects to the server
 if __name__ == "__main__":
     handle_arguments()
     connect_to_server()
