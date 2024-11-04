@@ -4,20 +4,26 @@ import logging
 import sys
 import json
 
+# Configure logging to show info-level messages and format them with timestamps
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
+# Default server settings for IP and port
 HOST = '127.0.0.1'
 PORT = 65432
-RUNNING = True
-clients = []
+RUNNING = True  # Control flag for server operation
+clients = []  # List to keep track of connected clients
+
+# Current game state including board status, turn info, and game status
 game_state = {
-    "board": [["" for _ in range(3)] for _ in range(3)],
-    "next_turn": None,
-    "status": "ongoing"
+    "board": [["" for _ in range(3)] for _ in range(3)],  # 3x3 game board initialized as empty
+    "next_turn": None,  # Player whose turn is next
+    "status": "ongoing"  # Game status; could be 'ongoing', 'win', or 'draw'
 }
-usernames = set()
+usernames = set()  # Set of usernames to ensure unique players
 
 def handle_arguments():
+    # Parses command-line arguments to set custom IP address and port number for the server.
+    # Displays help if needed and validates argument values.
     global PORT
     global HOST
     n = len(sys.argv)
@@ -61,6 +67,10 @@ def handle_arguments():
         i += 1
 
 def send_message(conn, message_type, data):
+    # Sends a JSON-encoded message to the client.
+    # conn: Client connection
+    # message_type: Type of the message (e.g., "move_ack", "chat")
+    # data: Message payload
     try:
         message = json.dumps({"type": message_type, "data": data}) + '\n'
         conn.sendall(message.encode('utf-8'))
@@ -68,6 +78,9 @@ def send_message(conn, message_type, data):
         logging.error(f"Error sending message: {e}")
 
 def handle_client(conn, addr):
+    # Manages a single client's connection, receiving messages and handling them.
+    # conn: Client connection
+    # addr: Client's address
     logging.info(f"New connection from {addr}")
     clients.append(conn)
     try:
@@ -84,6 +97,9 @@ def handle_client(conn, addr):
         logging.info(f"Connection closed with {addr}")
 
 def handle_message(conn, message):
+    # Processes received messages based on message type and dispatches to specific handlers.
+    # conn: Client connection
+    # message: JSON-decoded message dictionary
     message_type = message.get("type")
     username = message["data"].get("username") if "data" in message else None
 
@@ -97,6 +113,9 @@ def handle_message(conn, message):
         handle_quit(conn, username)
 
 def handle_join(conn, username):
+    # Manages new player joining the game, ensuring unique usernames and player limits.
+    # conn: Client connection
+    # username: Requested username for the player
     if not username or username in usernames:
         send_message(conn, "error", {"message": "Invalid or duplicate username."})
     elif len(usernames) == 2:
@@ -108,36 +127,34 @@ def handle_join(conn, username):
         logging.info(f"{username} joined the game.")
 
 def handle_move(conn, username, position):
-    # Check if username is valid
+    # Validates and processes player moves, updating the board and checking for game status.
+    # conn: Client connection
+    # username: Player's username making the move
+    # position: Target position on the board for the move
     if username not in usernames:
         send_message(conn, "error", {"message": "Username not recognized."})
         return
-    
-    # Check if exactly 2 players have joined
+
     if len(usernames) != 2:
-        send_message(conn, "error", {"message": f"Invalid number of players. Currently, there are {len(usernames)} player(s). Please wait for another player to join or use the join command."})
+        send_message(conn, "error", {"message": "Invalid number of players. Currently, there are {len(usernames)} player(s). Please wait for another player to join or use the join command."})
         return
-    
-    # Check if position is valid
+
     if not position or "row" not in position or "col" not in position:
         send_message(conn, "error", {"message": "Invalid move position."})
         return
-    
+
     row, col = position["row"], position["col"]
     if not (0 <= row < 3 and 0 <= col < 3) or game_state["board"][row][col] != "":
         send_message(conn, "error", {"message": "Invalid or occupied move position. Redo your move"})
         return
-    
-    # Ensure it's the player's turn
+
     if game_state["next_turn"] != username:
         send_message(conn, "error", {"message": "It's not your turn."})
         return
 
-    # Assign symbol based on player turn
     symbol = "X" if username == list(usernames)[0] else "O"
     game_state["board"][row][col] = symbol
 
-    # Switch turn to the other player
     game_state["next_turn"] = [user for user in usernames if user != username][0]
 
     update_all_clients()
@@ -148,6 +165,10 @@ def handle_move(conn, username, position):
     logging.info(f"{username} made a move at position ({row}, {col})")
 
 def handle_chat(conn, username, chat_message):
+    # Broadcasts chat messages to all connected players.
+    # conn: Client connection
+    # username: Player's username
+    # chat_message: Chat message text
     if username not in usernames or not chat_message:
         send_message(conn, "error", {"message": "Invalid chat message or unrecognized username."})
     else:
@@ -155,6 +176,9 @@ def handle_chat(conn, username, chat_message):
         logging.info(f"Broadcasting chat from {username}: {chat_message}")
 
 def handle_quit(conn, username):
+    # Handles player quitting, updating game state and notifying other players.
+    # conn: Client connection
+    # username: Player's username
     if username in usernames:
         usernames.remove(username)
         broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game."})
@@ -162,10 +186,14 @@ def handle_quit(conn, username):
         reset_game()
 
 def broadcast_message(message_type, data):
+    # Sends a message to all connected clients.
+    # message_type: Type of the message
+    # data: Message content
     for client in clients:
         send_message(client, message_type, data)
 
 def update_all_clients():
+    # Sends the updated game state to all players after each move.
     broadcast_message("game_update", {
         "board": game_state["board"],
         "next_turn": game_state["next_turn"],
@@ -173,6 +201,7 @@ def update_all_clients():
     })
 
 def reset_game():
+    # Resets the game board and clears players' data for a new game session.
     game_state["board"] = [["" for _ in range(3)] for _ in range(3)]
     game_state["next_turn"] = None
     game_state["status"] = "ongoing"
@@ -180,27 +209,27 @@ def reset_game():
     logging.info("Game reset")
 
 def check_game_status():
-    # Check rows
+    # Checks for a win, draw, or ongoing game status after each move.
     for i in range(3):
         if game_state["board"][i][0] == game_state["board"][i][1] == game_state["board"][i][2] != "":
             end_game(game_state["board"][i][0])
             return
-    
+
     # Check columns
     for i in range(3):
         if game_state["board"][0][i] == game_state["board"][1][i] == game_state["board"][2][i] != "":
             end_game(game_state["board"][0][i])
             return
-    
+
     # Check diagonals
     if game_state["board"][0][0] == game_state["board"][1][1] == game_state["board"][2][2] != "":
         end_game(game_state["board"][0][0])
         return
-    
+
     if game_state["board"][0][2] == game_state["board"][1][1] == game_state["board"][2][0] != "":
         end_game(game_state["board"][0][2])
         return
-    
+
     # Check for draw
     if all(cell != "" for row in game_state["board"] for cell in row):
         broadcast_message("game_result", {"result": "draw"})
@@ -208,6 +237,8 @@ def check_game_status():
         reset_game()
 
 def end_game(winner_symbol):
+    # Ends the game and announces the winner, if there is one.
+    # winner_symbol: Symbol ('X' or 'O') of the winning player
     winner_username = list(usernames)[0] if winner_symbol == "X" else list(usernames)[1]
     broadcast_message("game_result", {
         "result": "win",
@@ -218,6 +249,7 @@ def end_game(winner_symbol):
     reset_game()
 
 def start_server():
+    # Starts the server, accepting and managing client connections in threads.
     global RUNNING
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((HOST, PORT))
