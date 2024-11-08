@@ -17,6 +17,7 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * Sockets
 * Threading
 * Logging
+* JSON
 
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
