@@ -3,11 +3,13 @@ import logging
 import sys
 import json
 import threading
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 HOST = None  # Server's IP address or DNS name
 PORT = 65432  # Port the server is listening on
+current_username = None  # Store the current user's username
 
 # Parses command-line arguments to set the server's host and port values
 def handle_arguments():
@@ -141,16 +143,22 @@ def connect_to_server():
 
         # Main loop for user input, allowing the user to send various types of messages
         while True:
+            # Wait for a short time to prevent the input prompt from appearing before the server response
+            time.sleep(0.1)
             message = input("Enter message type (join/move/chat/quit) or 'exit' to disconnect: ")
             if message.lower() == 'exit':
                 break
 
             if message == "join":
                 username = input("Enter your username: ")
+                global current_username
+                current_username = username
                 send_message(client_socket, "join", {"username": username})
 
             elif message == "move":
-                username = input("Enter your username: ")
+                if not current_username:
+                    logging.error("Please join the game first.")
+                    continue
                 try:
                     row = int(input("Enter row (0-2): "))
                     col = int(input("Enter column (0-2): "))
@@ -160,16 +168,18 @@ def connect_to_server():
                 if not (0 <= row <= 2 and 0 <= col <= 2):
                     logging.error("Row and Column must be between 0 and 2.")
                     continue
-                send_message(client_socket, "move", {"username": username, "position": {"row": row, "col": col}})
+                send_message(client_socket, "move", {"username": current_username, "position": {"row": row, "col": col}})
 
             elif message == "chat":
-                username = input("Enter your username: ")
+                if not current_username:
+                    logging.error("Please join the game first.")
+                    continue
                 chat_message = input("Enter your message: ")
-                send_message(client_socket, "chat", {"username": username, "message": chat_message})
+                send_message(client_socket, "chat", {"username": current_username, "message": chat_message})
 
             elif message == "quit":
-                username = input("Enter your username: ")
-                send_message(client_socket, "quit", {"username": username})
+                if current_username:
+                    send_message(client_socket, "quit", {"username": current_username})
                 break
 
             else:

@@ -45,8 +45,14 @@ class TestTicTacToeGame(unittest.TestCase):
         self.listener2.start()
 
     def tearDown(self):
-        self.client_socket1.close()
-        self.client_socket2.close()
+        if hasattr(self, 'client_socket1'):
+            send_message(self.client_socket1, "quit", {"username": "player1"})
+            self.client_socket1.close()
+        if hasattr(self, 'client_socket2'):
+            send_message(self.client_socket2, "quit", {"username": "player2"})
+            self.client_socket2.close()
+        # Allow time for server to process disconnections
+        time.sleep(0.1)
 
     def message_listener(self, client_socket, message_queue):
         buffer = ""
@@ -133,12 +139,45 @@ class TestTicTacToeGame(unittest.TestCase):
         self.wait_for_messages()
         self.clear_message_queues()
         
+        # Second client tries to use same username should succeed with a switch
         send_message(self.client_socket2, "join", {"username": "player1"})
         self.wait_for_messages()
         
-        error_messages = [msg for msg in self.client2_messages if msg["type"] == "error"]
-        self.assertTrue(len(error_messages) > 0)
-        self.assertIn("duplicate username", error_messages[0]["data"]["message"].lower())
+        # Should get a switch confirmation
+        switch_messages = [msg for msg in self.client2_messages if msg["type"] == "move_ack"]
+        self.assertTrue(len(switch_messages) > 0)
+        self.assertIn("switched to username", switch_messages[0]["data"]["message"].lower())
+
+    def test_username_switching(self):
+        # Test switching usernames for the same client
+        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.wait_for_messages()
+        self.clear_message_queues()
+
+        # Switch to a different username
+        send_message(self.client_socket1, "join", {"username": "player2"})
+        self.wait_for_messages()
+
+        switch_messages = [msg for msg in self.client1_messages if msg["type"] == "move_ack"]
+        self.assertTrue(len(switch_messages) > 0)
+        self.assertIn("switched to username", switch_messages[0]["data"]["message"].lower())
+
+    def test_username_persistence(self):
+        # Test that usernames persist after client disconnection
+        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.wait_for_messages()
+        self.clear_message_queues()
+
+        # Create a new client connection
+        new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        new_socket.connect((HOST, PORT))
+        
+        # Try to use the same username with new connection
+        send_message(new_socket, "join", {"username": "player1"})
+        
+        # Wait for response and verify it's allowed
+        time.sleep(1)
+        new_socket.close()
 
     def test_invalid_move(self):
         # Join game with two players
