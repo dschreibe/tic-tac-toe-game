@@ -124,6 +124,8 @@ def handle_join(conn, username):
         usernames.add(username)
         game_state["next_turn"] = game_state["next_turn"] or username
         send_message(conn, "move_ack", {"message": f"{username} joined the game."})
+        if (len(usernames) == 2):
+            broadcast_message("chat", {"username": "Server", "message": "Game started. First player: " + list(usernames)[1] + " can make a move!"})
         logging.info(f"{username} joined the game.")
 
 def handle_move(conn, username, position):
