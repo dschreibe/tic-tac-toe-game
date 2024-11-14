@@ -215,16 +215,13 @@ def handle_quit(conn, username):
     # Handles player quitting, updating game state and notifying other players.
     # conn: Client connection
     # username: Player's username
-<<<<<<< Updated upstream
     if username in usernames:
         usernames.remove(username)
         broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game."})
-=======
     if conn in client_usernames:
         username = client_usernames[conn]
         del client_usernames[conn]
         broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game. From the machine: {conn.getpeername()}" })
->>>>>>> Stashed changes
         logging.info(f"{username} has left the game.")
         # reset_game() # Maybe don't reset game when someone leaves
 
