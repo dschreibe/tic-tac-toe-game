@@ -20,6 +20,7 @@ game_state = {
     "status": "ongoing"  # Game status; could be 'ongoing', 'win', or 'draw'
 }
 usernames = set()  # Set of usernames to ensure unique players
+client_usernames = {}  # Maps client connections to usernames
 
 def handle_arguments():
     # Parses command-line arguments to set custom IP address and port number for the server.
@@ -93,6 +94,10 @@ def handle_client(conn, addr):
         logging.error(f"Socket error with {addr}: {e}")
         handle_quit(conn, None)  # Let handle_quit handle the cleanup
     finally:
+        if conn in client_usernames:
+            username = client_usernames[conn]
+            usernames.discard(username)
+            del client_usernames[conn]
         conn.close()
         if conn in clients:
             clients.remove(conn)
@@ -118,17 +123,44 @@ def handle_join(conn, username):
     # Manages new player joining the game, ensuring unique usernames and player limits.
     # conn: Client connection
     # username: Requested username for the player
-    if not username or username in usernames:
-        send_message(conn, "error", {"message": "Invalid or duplicate username."})
-    elif len(usernames) == 2:
-        send_message(conn, "error", {"message": "Game already started between two players"})
-    else:
+    
+    # Check if the game is full or the username is invalid
+    if len(usernames) >= 2 and username not in usernames:
+        send_message(conn, "error", {"message": "Game is full. Please wait for the next game."})
+        return
+    if not username:
+        send_message(conn, "error", {"message": "Invalid username."})
+        return
+
+    # If this client already has a username, it's switching
+    switching = conn in client_usernames
+    
+    # If another client is using this username, it's also switching
+    if not switching and username in [name for name in client_usernames.values()]:
+        switching = True
+
+    # Add username to the set if it's new
+    if username not in usernames:
         usernames.add(username)
         game_state["next_turn"] = game_state["next_turn"] or username
+
+    # Update the client's username
+    client_usernames[conn] = username
+
+    # Send appropriate message based on whether switching or joining
+    if switching:
+        send_message(conn, "move_ack", {"message": f"Switched to username: {username}"})
+    else:
         send_message(conn, "move_ack", {"message": f"{username} joined the game."})
-        if (len(usernames) == 2):
-            broadcast_message("chat", {"username": "Server", "message": "Game started. First player: " + list(usernames)[1] + " can make a move!"})
-        logging.info(f"{username} joined the game.")
+    
+    # Might change later currently keeps on sending message even when switching
+    if len(usernames) == 2:
+        broadcast_message("chat", {
+            "username": "Server", 
+            "message": f"Game started! {game_state['next_turn']}'s turn."
+        })
+    
+    logging.info(f"{'Switched to' if switching else 'Joined as'} {username}")
 
 def handle_move(conn, username, position):
     # Validates and processes player moves, updating the board and checking for game status.
@@ -140,7 +172,7 @@ def handle_move(conn, username, position):
         return
 
     if len(usernames) != 2:
-        send_message(conn, "error", {"message": "Invalid number of players. Currently, there are {len(usernames)} player(s). Please wait for another player to join or use the join command."})
+        send_message(conn, "error", {"message": f"Invalid number of players. Currently, there are {len(usernames)} player(s). Please wait for another player to join or use the join command."})
         return
 
     if not position or "row" not in position or "col" not in position:
@@ -216,6 +248,7 @@ def reset_game():
     game_state["board"] = [["" for _ in range(3)] for _ in range(3)]
     game_state["next_turn"] = None
     game_state["status"] = "ongoing"
+    client_usernames.clear()
     usernames.clear()
     logging.info("Game reset")
 
