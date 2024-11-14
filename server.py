@@ -91,9 +91,11 @@ def handle_client(conn, addr):
             handle_message(conn, json.loads(message.decode('utf-8')))
     except socket.error as e:
         logging.error(f"Socket error with {addr}: {e}")
+        handle_quit(conn, None)  # Let handle_quit handle the cleanup
     finally:
         conn.close()
-        clients.remove(conn)
+        if conn in clients:
+            clients.remove(conn)
         logging.info(f"Connection closed with {addr}")
 
 def handle_message(conn, message):
@@ -181,11 +183,18 @@ def handle_quit(conn, username):
     # Handles player quitting, updating game state and notifying other players.
     # conn: Client connection
     # username: Player's username
+<<<<<<< Updated upstream
     if username in usernames:
         usernames.remove(username)
         broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game."})
+=======
+    if conn in client_usernames:
+        username = client_usernames[conn]
+        del client_usernames[conn]
+        broadcast_message("chat", {"username": "Server", "message": f"{username} has left the game. From the machine: {conn.getpeername()}" })
+>>>>>>> Stashed changes
         logging.info(f"{username} has left the game.")
-        reset_game()
+        # reset_game() # Maybe don't reset game when someone leaves
 
 def broadcast_message(message_type, data):
     # Sends a message to all connected clients.
