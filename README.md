@@ -3,11 +3,12 @@
 This is a simple Tic-Tac-Toe game implemented using Python and sockets. The project is console based aiming to work on any computer that runs Python
 
 **How to play:**
-1. Run server.py
-2. Run client.py (you can also run multiple clients or just one)
+1. Run `server.py`
+2. Run `client.py` (you can also run multiple clients or just one)
 3. On client, type "join" then follow instructions to select username
 4. Either on same client or different client, type "join" then follow instructions to select username
-5. Once two users have joined, on client type move and use the first user who joined the game
+  * NOTE: A client can only have one "username" at a time. This means if you are using one client you have to type in "join" to switch between these two usernames to play. If using two clients you can switch between clients when playing without having to type join again.
+5. Once two users have joined, on client type "move" and use the first user who joined the game
 6. Continue game until there is a winner or draw
 7. Once winner or draw is determined new usernames have to be picked!
 
