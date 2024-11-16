@@ -102,13 +102,23 @@ def handle_server_response(client_socket):
             logging.error(f"Socket error: {e}")
             break
 
+# Formats the board as a 3x3 grid
+def format_board(board):
+    board_str = "\n"
+    for row in range(3):
+        board_str += f" {board[row][0] or ' '} | {board[row][1] or ' '} | {board[row][2] or ' '} \n"
+        if row < 2:
+            board_str += "---+---+---\n"
+    return board_str
+
 # Handles individual messages from the server based on message type
 def handle_message(message):
     if message["type"] == "game_update":
         board = message["data"]["board"]
         next_turn = message["data"]["next_turn"]
         status = message["data"]["status"]
-        logging.info(f"Board: {board}")
+        logging.info("\nCurrent board state:")
+        logging.info(format_board(board))
         logging.info(f"Next turn: {next_turn}")
         logging.info(f"Game status: {status}")
 
