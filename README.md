@@ -20,6 +20,30 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * Logging
 * JSON
 
+**Features**
+
+* State Management:
+The server tracks the current game state, including:
+The game board.
+The player's turn.
+The game's status (ongoing, win, draw).
+Clients receive regular updates about the game state via game_update messages.
+* Input Handling:
+Clients validate user input:
+Ensures usernames are unique.
+Verifies move coordinates are within bounds (0–2).
+Prevents invalid moves (e.g., selecting an occupied cell).
+* Winning Conditions:
+The server determines win/draw conditions and notifies clients via game_result messages.
+Winning moves are logged, and the winner's username is displayed.
+* Game-Over Handling:
+Clients display the result and allow users to start a new game by rejoining with a username.
+* User Interface:
+Text-based, console UI:
+Displays the board in a 3x3 grid format after each move.
+Shows game results, including the winner or a draw message.
+Provides logs for actions like moves, chat messages, and errors.
+
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
 
