@@ -3,8 +3,10 @@ import socket
 import threading
 import time
 import json
-from server import start_server, RUNNING, HOST, PORT, game_state, usernames, clients
+from server import start_server, RUNNING, PORT, game_state, usernames, clients
 from client import send_message, handle_message
+
+TEST_HOST = '127.0.0.1' # Use localhost instead of before 0.0.0.0
 
 class TestTicTacToeGame(unittest.TestCase):
     @classmethod
@@ -27,8 +29,8 @@ class TestTicTacToeGame(unittest.TestCase):
         # Create test client sockets
         self.client_socket1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket1.connect((HOST, PORT))
-        self.client_socket2.connect((HOST, PORT))
+        self.client_socket1.connect((TEST_HOST, PORT))
+        self.client_socket2.connect((TEST_HOST, PORT))
 
         # Create message queues for each client
         self.client1_messages = []
@@ -170,7 +172,7 @@ class TestTicTacToeGame(unittest.TestCase):
 
         # Create a new client connection
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        new_socket.connect((HOST, PORT))
+        new_socket.connect((TEST_HOST, PORT))
         
         # Try to use the same username with new connection
         send_message(new_socket, "join", {"username": "player1"})
