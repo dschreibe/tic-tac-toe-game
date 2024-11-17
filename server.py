@@ -8,7 +8,7 @@ import json
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # Default server settings for IP and port
-HOST = '127.0.0.1'
+HOST = '0.0.0.0'  # Listen on all network interfaces
 PORT = 65432
 RUNNING = True  # Control flag for server operation
 clients = []  # List to keep track of connected clients
