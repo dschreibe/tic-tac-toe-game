@@ -4,6 +4,7 @@ import logging
 import sys
 import json
 from encryption import MessageEncryption, KeyExchange
+import time
 
 # Configure logging to show info-level messages and format them with timestamps
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -82,6 +83,8 @@ def send_message(conn, message_type, data):
         if conn in client_encryptions:
             encryption = client_encryptions[conn]
             encrypted_message = encryption.encrypt_message(message)
+            # Add a small delay between messages to prevent message corruption
+            time.sleep(0.05)
             conn.sendall(encrypted_message)
     except socket.error as e:
         logging.error(f"Error sending message: {e}")

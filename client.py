@@ -82,12 +82,12 @@ def send_message(client_socket, message_type, data):
 
 # Continuously listens for responses from the server and processes each message
 def handle_server_response(client_socket):
-    buffer = ""
+    buffer = b""
     while True:
         try:
             # Receives data from the server in chunks
-            encrypted_response = client_socket.recv(1024)
-            if not encrypted_response:
+            chunk = client_socket.recv(1024)
+            if not chunk:
                 logging.info("Connection closed by server.")
                 break
 
@@ -96,19 +96,26 @@ def handle_server_response(client_socket):
                 logging.error("Encryption not initialized")
                 break
 
-            decrypted_response = encryption.decrypt_message(encrypted_response)
-            buffer += decrypted_response
+            buffer += chunk
 
-            # Processes each complete line in the buffer as a separate message
-            while '\n' in buffer:
-                line, buffer = buffer.split('\n', 1)
-                if line:
-                    try:
-                        message = json.loads(line)
-                        print()
-                        handle_message(message)
-                    except json.JSONDecodeError as e:
-                        logging.error(f"JSON decode error: {e} - Line: {line}")
+            try:
+                # Try to decrypt the entire buffer
+                decrypted_data = encryption.decrypt_message(buffer)
+                buffer = b""  # Clear buffer after successful decryption
+                
+                # Process each complete message
+                lines = decrypted_data.split('\n')
+                for line in lines:
+                    if line:
+                        try:
+                            message = json.loads(line)
+                            print()
+                            handle_message(message)
+                        except json.JSONDecodeError as e:
+                            logging.error(f"JSON decode error: {e} - Line: {line}")
+            except Exception as e:
+                # Placeholder
+                continue
 
         except socket.error as e:
             logging.error(f"Socket error: {e}")
