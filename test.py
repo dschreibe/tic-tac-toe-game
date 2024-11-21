@@ -74,20 +74,26 @@ class TestTicTacToeGame(unittest.TestCase):
         time.sleep(0.1)
 
     def tearDown(self):
+        time.sleep(0.2)
+        
         if hasattr(self, 'client_socket1'):
             try:
                 self.send_test_message(self.client_socket1, "quit", {"username": "player1"}, self.encryption1)
+                time.sleep(0.1)
             except:
                 pass
-            self.client_socket1.close()
+            finally:
+                self.client_socket1.close()
+        
         if hasattr(self, 'client_socket2'):
             try:
                 self.send_test_message(self.client_socket2, "quit", {"username": "player2"}, self.encryption2)
+                time.sleep(0.1)
             except:
                 pass
-            self.client_socket2.close()
-        # Allow time for server to process disconnections
-        time.sleep(0.1)
+            finally:
+                self.client_socket2.close()
+        time.sleep(0.2)
 
     def send_test_message(self, client_socket, message_type, data, encryption):
         message = {
@@ -122,7 +128,15 @@ class TestTicTacToeGame(unittest.TestCase):
         self.client2_messages.clear()
 
     def wait_for_messages(self, timeout=1):
-        time.sleep(timeout)
+        start_time = time.time()
+        wait_time = 0.1
+        while time.time() - start_time < timeout:
+            if self.client1_messages or self.client2_messages:
+                # Wait for additional messages
+                time.sleep(0.1)
+                break
+            time.sleep(wait_time)
+            wait_time = min(wait_time * 1.5, timeout - (time.time() - start_time))
 
     def test_valid_move(self):
         # Join game with two players
