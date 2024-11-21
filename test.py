@@ -3,10 +3,11 @@ import socket
 import threading
 import time
 import json
-from server import start_server, RUNNING, PORT, game_state, usernames, clients
+from server import start_server, RUNNING, PORT, game_state, usernames, clients, client_encryptions
 from client import send_message, handle_message
+from encryption import KeyExchange, MessageEncryption
 
-TEST_HOST = '127.0.0.1' # Use localhost instead of before 0.0.0.0
+TEST_HOST = '127.0.0.1'  # Use localhost instead of before 0.0.0.0
 
 class TestTicTacToeGame(unittest.TestCase):
     @classmethod
@@ -19,12 +20,13 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def setUp(self):
         # Reset game state before each test
-        global game_state, usernames, clients
+        global game_state, usernames, clients, client_encryptions
         game_state["board"] = [["" for _ in range(3)] for _ in range(3)]
         game_state["next_turn"] = None
         game_state["status"] = "ongoing"
         usernames.clear()
         clients.clear()
+        client_encryptions.clear()
         
         # Create test client sockets
         self.client_socket1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,38 +34,78 @@ class TestTicTacToeGame(unittest.TestCase):
         self.client_socket1.connect((TEST_HOST, PORT))
         self.client_socket2.connect((TEST_HOST, PORT))
 
+        # Setup encryption for test clients
+        self.key_exchange1 = KeyExchange()
+        self.key_exchange2 = KeyExchange()
+        
+        # Setup encryption for client 1
+        server_public_key = self.client_socket1.recv(1024)
+        self.encryption1 = MessageEncryption()
+        encrypted_symmetric_key = self.key_exchange1.encrypt_symmetric_key(
+            server_public_key,
+            self.encryption1.symmetric_key
+        )
+        self.client_socket1.sendall(encrypted_symmetric_key)
+
+        # Setup encryption for client 2
+        server_public_key = self.client_socket2.recv(1024)
+        self.encryption2 = MessageEncryption()
+        encrypted_symmetric_key = self.key_exchange2.encrypt_symmetric_key(
+            server_public_key,
+            self.encryption2.symmetric_key
+        )
+        self.client_socket2.sendall(encrypted_symmetric_key)
+
         # Create message queues for each client
         self.client1_messages = []
         self.client2_messages = []
 
         # Start listener threads for both clients
         self.listener1 = threading.Thread(target=self.message_listener, 
-                                        args=(self.client_socket1, self.client1_messages))
+                                        args=(self.client_socket1, self.client1_messages, self.encryption1))
         self.listener2 = threading.Thread(target=self.message_listener, 
-                                        args=(self.client_socket2, self.client2_messages))
+                                        args=(self.client_socket2, self.client2_messages, self.encryption2))
         self.listener1.daemon = True
         self.listener2.daemon = True
         self.listener1.start()
         self.listener2.start()
 
+        # Give time for encryption setup to complete
+        time.sleep(0.1)
+
     def tearDown(self):
         if hasattr(self, 'client_socket1'):
-            send_message(self.client_socket1, "quit", {"username": "player1"})
+            try:
+                self.send_test_message(self.client_socket1, "quit", {"username": "player1"}, self.encryption1)
+            except:
+                pass
             self.client_socket1.close()
         if hasattr(self, 'client_socket2'):
-            send_message(self.client_socket2, "quit", {"username": "player2"})
+            try:
+                self.send_test_message(self.client_socket2, "quit", {"username": "player2"}, self.encryption2)
+            except:
+                pass
             self.client_socket2.close()
         # Allow time for server to process disconnections
         time.sleep(0.1)
 
-    def message_listener(self, client_socket, message_queue):
+    def send_test_message(self, client_socket, message_type, data, encryption):
+        message = {
+            "type": message_type,
+            "data": data
+        }
+        encrypted_message = encryption.encrypt_message(json.dumps(message) + '\n')
+        client_socket.sendall(encrypted_message)
+
+    def message_listener(self, client_socket, message_queue, encryption):
         buffer = ""
         while True:
             try:
                 data = client_socket.recv(1024)
                 if not data:
                     break
-                buffer += data.decode('utf-8')
+                decrypted_data = encryption.decrypt_message(data)
+                buffer += decrypted_data
                 while '\n' in buffer:
                     line, buffer = buffer.split('\n', 1)
                     if line:
@@ -72,7 +114,7 @@ class TestTicTacToeGame(unittest.TestCase):
                             message_queue.append(message)
                         except json.JSONDecodeError:
                             print(f"Test listener JSON decode error: {line}")
-            except:
+            except Exception as e:
                 break
 
     def clear_message_queues(self):
@@ -84,18 +126,18 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_valid_move(self):
         # Join game with two players
-        send_message(self.client_socket1, "join", {"username": "player1"})
-        send_message(self.client_socket2, "join", {"username": "player2"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
+        self.send_test_message(self.client_socket2, "join", {"username": "player2"}, self.encryption2)
         
         # Wait for join messages to be processed
         self.wait_for_messages()
         self.clear_message_queues()
 
         # Make a move with the first player
-        send_message(self.client_socket1, "move", {
+        self.send_test_message(self.client_socket1, "move", {
             "username": "player1",
             "position": {"row": 0, "col": 0}
-        })
+        }, self.encryption1)
 
         # Wait for move to be processed
         self.wait_for_messages()
@@ -128,7 +170,7 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_join_game(self):
         # Test joining game with valid username
-        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
         self.wait_for_messages()
         
         response = next((msg for msg in self.client1_messages if msg["type"] == "move_ack"), None)
@@ -137,12 +179,12 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_duplicate_username(self):
         # Test joining with duplicate username
-        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
         self.wait_for_messages()
         self.clear_message_queues()
         
         # Second client tries to use same username should succeed with a switch
-        send_message(self.client_socket2, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket2, "join", {"username": "player1"}, self.encryption2)
         self.wait_for_messages()
         
         # Should get a switch confirmation
@@ -152,12 +194,12 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_username_switching(self):
         # Test switching usernames for the same client
-        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
         self.wait_for_messages()
         self.clear_message_queues()
 
         # Switch to a different username
-        send_message(self.client_socket1, "join", {"username": "player2"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player2"}, self.encryption1)
         self.wait_for_messages()
 
         switch_messages = [msg for msg in self.client1_messages if msg["type"] == "move_ack"]
@@ -166,7 +208,7 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_username_persistence(self):
         # Test that usernames persist after client disconnection
-        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
         self.wait_for_messages()
         self.clear_message_queues()
 
@@ -174,8 +216,19 @@ class TestTicTacToeGame(unittest.TestCase):
         new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         new_socket.connect((TEST_HOST, PORT))
         
+        # Setup encryption for new socket
+        server_public_key = new_socket.recv(1024)
+        encryption3 = MessageEncryption()
+        key_exchange3 = KeyExchange()
+        encrypted_symmetric_key = key_exchange3.encrypt_symmetric_key(
+            server_public_key,
+            encryption3.symmetric_key
+        )
+        new_socket.sendall(encrypted_symmetric_key)
+        time.sleep(0.1)  # Give time for encryption setup
+        
         # Try to use the same username with new connection
-        send_message(new_socket, "join", {"username": "player1"})
+        self.send_test_message(new_socket, "join", {"username": "player1"}, encryption3)
         
         # Wait for response and verify it's allowed
         time.sleep(1)
@@ -183,16 +236,16 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_invalid_move(self):
         # Join game with two players
-        send_message(self.client_socket1, "join", {"username": "player1"})
-        send_message(self.client_socket2, "join", {"username": "player2"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
+        self.send_test_message(self.client_socket2, "join", {"username": "player2"}, self.encryption2)
         self.wait_for_messages()
         self.clear_message_queues()
         
         # Test move to invalid position
-        send_message(self.client_socket1, "move", {
+        self.send_test_message(self.client_socket1, "move", {
             "username": "player1",
             "position": {"row": 3, "col": 3}
-        })
+        }, self.encryption1)
         self.wait_for_messages()
         
         error_messages = [msg for msg in self.client1_messages if msg["type"] == "error"]
@@ -201,14 +254,14 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_chat_message(self):
         # Join game and send chat message
-        send_message(self.client_socket1, "join", {"username": "player1"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
         self.wait_for_messages()
         self.clear_message_queues()
         
-        send_message(self.client_socket1, "chat", {
+        self.send_test_message(self.client_socket1, "chat", {
             "username": "player1",
             "message": "Hello, World!"
-        })
+        }, self.encryption1)
         self.wait_for_messages()
         
         # Verify both clients received the chat message
@@ -222,8 +275,8 @@ class TestTicTacToeGame(unittest.TestCase):
 
     def test_win_condition(self):
         # Join game with two players
-        send_message(self.client_socket1, "join", {"username": "player1"})
-        send_message(self.client_socket2, "join", {"username": "player2"})
+        self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
+        self.send_test_message(self.client_socket2, "join", {"username": "player2"}, self.encryption2)
         
         # Wait for join messages to be processed
         self.wait_for_messages()
@@ -238,23 +291,17 @@ class TestTicTacToeGame(unittest.TestCase):
         ]
 
         # Execute moves
-        # print(self.client1_messages)
-        # print(self.client2_messages)
         for move in moves:
-            send_message(move["socket"], "move", {
+            self.send_test_message(move["socket"], "move", {
                 "username": move["username"],
                 "position": move["position"]
-            })
-            # print(self.client1_messages)
-            # print(self.client2_messages)
+            }, self.encryption1 if move["socket"] == self.client_socket1 else self.encryption2)
             self.wait_for_messages()
 
         # Wait a bit
         self.wait_for_messages(timeout=4)
 
         # Verify that both clients received the game_result message
-        # print(self.client1_messages)
-        # print(self.client2_messages)
         game_results_client1 = [msg for msg in self.client1_messages if msg["type"] == "game_result"]
         game_results_client2 = [msg for msg in self.client2_messages if msg["type"] == "game_result"]
         
