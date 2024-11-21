@@ -138,13 +138,28 @@ class TestTicTacToeGame(unittest.TestCase):
             time.sleep(wait_time)
             wait_time = min(wait_time * 1.5, timeout - (time.time() - start_time))
 
+    def wait_for_specific_message(self, message_queue, message_type, timeout=2, retries=3):
+        for attempt in range(retries):
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                messages = [msg for msg in message_queue if msg["type"] == message_type]
+                if messages:
+                    return messages
+                time.sleep(0.1)
+            # retry
+            if attempt < retries - 1:
+                self.clear_message_queues()
+                time.sleep(0.2)
+        return []
+
     def test_valid_move(self):
         # Join game with two players
         self.send_test_message(self.client_socket1, "join", {"username": "player1"}, self.encryption1)
+        time.sleep(0.2)
         self.send_test_message(self.client_socket2, "join", {"username": "player2"}, self.encryption2)
         
         # Wait for join messages to be processed
-        self.wait_for_messages()
+        self.wait_for_messages(timeout=2)
         self.clear_message_queues()
 
         # Make a move with the first player
@@ -153,12 +168,9 @@ class TestTicTacToeGame(unittest.TestCase):
             "position": {"row": 0, "col": 0}
         }, self.encryption1)
 
-        # Wait for move to be processed
-        self.wait_for_messages()
-
-        # Verify that both clients received the game update
-        player1_updates = [msg for msg in self.client1_messages if msg["type"] == "game_update"]
-        player2_updates = [msg for msg in self.client2_messages if msg["type"] == "game_update"]
+        # Wait specifically for game updates
+        player1_updates = self.wait_for_specific_message(self.client1_messages, "game_update")
+        player2_updates = self.wait_for_specific_message(self.client2_messages, "game_update")
 
         # Assert that both clients received the update
         self.assertTrue(len(player1_updates) > 0, "Player 1 did not receive game update")
