@@ -3,6 +3,8 @@ import threading
 import logging
 import sys
 import json
+from encryption import MessageEncryption, KeyExchange
+import time
 
 # Configure logging to show info-level messages and format them with timestamps
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -12,6 +14,10 @@ HOST = '0.0.0.0'  # Listen on all network interfaces
 PORT = 65432
 RUNNING = True  # Control flag for server operation
 clients = []  # List to keep track of connected clients
+client_encryptions = {}  # Map client connections to their encryption objects
+
+# Initialize key exchange
+key_exchange = KeyExchange()
 
 # Current game state including board status, turn info, and game status
 game_state = {
@@ -74,7 +80,12 @@ def send_message(conn, message_type, data):
     # data: Message payload
     try:
         message = json.dumps({"type": message_type, "data": data}) + '\n'
-        conn.sendall(message.encode('utf-8'))
+        if conn in client_encryptions:
+            encryption = client_encryptions[conn]
+            encrypted_message = encryption.encrypt_message(message)
+            # Add a small delay between messages to prevent message corruption
+            time.sleep(0.05)
+            conn.sendall(encrypted_message)
     except socket.error as e:
         logging.error(f"Error sending message: {e}")
 
@@ -83,13 +94,30 @@ def handle_client(conn, addr):
     # conn: Client connection
     # addr: Client's address
     logging.info(f"New connection from {addr}")
-    clients.append(conn)
+    
     try:
+        # First, send our public key to the client
+        conn.sendall(key_exchange.get_public_key_bytes())
+        
+        # Receive the encrypted symmetric key from the client
+        encrypted_symmetric_key = conn.recv(1024)
+        if not encrypted_symmetric_key:
+            return
+            
+        # Decrypt the symmetric key and create encryption object for this client
+        symmetric_key = key_exchange.decrypt_symmetric_key(encrypted_symmetric_key)
+        client_encryptions[conn] = MessageEncryption(symmetric_key)
+            
+        # Add client to the list after successful key exchange
+        clients.append(conn)
+        
         while True:
-            message = conn.recv(1024)
-            if not message:
+            encrypted_message = conn.recv(1024)
+            if not encrypted_message:
                 break
-            handle_message(conn, json.loads(message.decode('utf-8')))
+            encryption = client_encryptions[conn]
+            decrypted_message = encryption.decrypt_message(encrypted_message)
+            handle_message(conn, json.loads(decrypted_message))
     except socket.error as e:
         logging.error(f"Socket error with {addr}: {e}")
         handle_quit(conn, None)  # Let handle_quit handle the cleanup
@@ -98,6 +126,8 @@ def handle_client(conn, addr):
             username = client_usernames[conn]
             usernames.discard(username)
             del client_usernames[conn]
+        if conn in client_encryptions:
+            del client_encryptions[conn]
         conn.close()
         if conn in clients:
             clients.remove(conn)

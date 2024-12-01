@@ -4,12 +4,17 @@ import sys
 import json
 import threading
 import time
+from encryption import MessageEncryption, KeyExchange
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 HOST = None  # Server's IP address or DNS name
 PORT = 65432  # Port the server is listening on
 current_username = None  # Store the current user's username
+
+# Initialize encryption
+key_exchange = KeyExchange()
+encryption = None  # Will be initialized after key exchange
 
 # Parses command-line arguments to set the server's host and port values
 def handle_arguments():
@@ -72,31 +77,45 @@ def send_message(client_socket, message_type, data):
         "type": message_type,
         "data": data
     }
-    client_socket.sendall((json.dumps(message) + '\n').encode('utf-8'))
+    encrypted_message = encryption.encrypt_message(json.dumps(message) + '\n')
+    client_socket.sendall(encrypted_message)
 
 # Continuously listens for responses from the server and processes each message
 def handle_server_response(client_socket):
-    buffer = ""
+    buffer = b""
     while True:
         try:
             # Receives data from the server in chunks
-            response = client_socket.recv(1024)
-            if not response:
+            chunk = client_socket.recv(1024)
+            if not chunk:
                 logging.info("Connection closed by server.")
                 break
 
-            buffer += response.decode('utf-8')
+            # Make sure encryption is initialized
+            if encryption is None:
+                logging.error("Encryption not initialized")
+                break
 
-            # Processes each complete line in the buffer as a separate message
-            while '\n' in buffer:
-                line, buffer = buffer.split('\n', 1)
-                if line:
-                    try:
-                        message = json.loads(line)
-                        print()
-                        handle_message(message)
-                    except json.JSONDecodeError as e:
-                        logging.error(f"JSON decode error: {e} - Line: {line}")
+            buffer += chunk
+
+            try:
+                # Try to decrypt the entire buffer
+                decrypted_data = encryption.decrypt_message(buffer)
+                buffer = b""  # Clear buffer after successful decryption
+                
+                # Process each complete message
+                lines = decrypted_data.split('\n')
+                for line in lines:
+                    if line:
+                        try:
+                            message = json.loads(line)
+                            print()
+                            handle_message(message)
+                        except json.JSONDecodeError as e:
+                            logging.error(f"JSON decode error: {e} - Line: {line}")
+            except Exception as e:
+                # Placeholder
+                continue
 
         except socket.error as e:
             logging.error(f"Socket error: {e}")
@@ -140,16 +159,35 @@ def handle_message(message):
 
 # Connects to the server, manages message sending, and listens for commands from the user
 def connect_to_server():
+    global current_username
+    
     try:
         # Creates a TCP socket and connects to the specified server
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((HOST, PORT))
         logging.info(f"Connected to server at {HOST}:{PORT}")
-
-        # Starts a new thread to handle responses from the server
-        listener_thread = threading.Thread(target=handle_server_response, args=(client_socket,))
-        listener_thread.daemon = True
-        listener_thread.start()
+        
+        # Receive server's public key
+        server_public_key = client_socket.recv(1024)
+        if not server_public_key:
+            logging.error("Failed to receive server's public key")
+            return
+            
+        # Generate our symmetric key and encrypt it with server's public key
+        global encryption
+        encryption = MessageEncryption()
+        encrypted_symmetric_key = key_exchange.encrypt_symmetric_key(
+            server_public_key,
+            encryption.get_symmetric_key()
+        )
+        
+        # Send encrypted symmetric key to server
+        client_socket.sendall(encrypted_symmetric_key)
+        
+        # Start listening for server responses in a separate thread
+        response_thread = threading.Thread(target=handle_server_response, args=(client_socket,))
+        response_thread.daemon = True
+        response_thread.start()
 
         # Main loop for user input, allowing the user to send various types of messages
         while True:
