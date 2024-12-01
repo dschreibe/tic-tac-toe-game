@@ -23,7 +23,7 @@ key_exchange = KeyExchange()
 game_state = {
     "board": [["" for _ in range(3)] for _ in range(3)],  # 3x3 game board initialized as empty
     "next_turn": None,  # Player whose turn is next
-    "status": "ongoing"  # Game status; could be 'ongoing', 'win', or 'draw'
+    "status": "waiting for players"  # Game status; could be 'waiting for players', 'ongoing', 'win', or 'draw'
 }
 usernames = set()  # Set of usernames to ensure unique players
 client_usernames = {}  # Maps client connections to usernames
@@ -148,6 +148,8 @@ def handle_message(conn, message):
         handle_chat(conn, username, message["data"].get("message"))
     elif message_type == "quit":
         handle_quit(conn, username)
+    elif message_type == "reset":
+        handle_reset(conn, username)
 
 def handle_join(conn, username):
     # Manages new player joining the game, ensuring unique usernames and player limits.
@@ -183,12 +185,14 @@ def handle_join(conn, username):
     else:
         send_message(conn, "move_ack", {"message": f"{username} joined the game."})
     
-    # Might change later currently keeps on sending message even when switching
     if len(usernames) == 2:
+        game_state["status"] = "ongoing"
         broadcast_message("chat", {
             "username": "Server", 
             "message": f"Game started! {game_state['next_turn']}'s turn."
         })
+    
+    # update_all_clients()
     
     logging.info(f"{'Switched to' if switching else 'Joined as'} {username}")
 
@@ -255,6 +259,20 @@ def handle_quit(conn, username):
         logging.info(f"{username} has left the game.")
         # reset_game() # Maybe don't reset game when someone leaves
 
+def handle_reset(conn, username):
+    # Handles game reset requests from clients
+    # conn: Client connection
+    # username: Player's username
+    if username not in usernames:
+        send_message(conn, "error", {"message": "You must join the game first."})
+        return
+        
+    reset_game()
+    broadcast_message("chat", {
+        "username": "Server",
+        "message": f"{username} has reset the game! Please rejoin with usernames to start a new game."
+    })
+
 def broadcast_message(message_type, data):
     # Sends a message to all connected clients.
     # message_type: Type of the message
@@ -274,7 +292,7 @@ def reset_game():
     # Resets the game board and clears players' data for a new game session.
     game_state["board"] = [["" for _ in range(3)] for _ in range(3)]
     game_state["next_turn"] = None
-    game_state["status"] = "ongoing"
+    game_state["status"] = "waiting for players"
     client_usernames.clear()
     usernames.clear()
     logging.info("Game reset")

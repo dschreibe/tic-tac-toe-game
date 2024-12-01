@@ -347,7 +347,7 @@ class TestTicTacToeGame(unittest.TestCase):
         
         self.assertEqual(game_result1["symbol"], game_result2["symbol"], "Different game_result symbol from two clients")
 
-        self.assertEqual(game_state["status"], "ongoing", "Game status was not reset after win")
+        self.assertEqual(game_state["status"], "waiting for players", "Game status was not reset after win")
         self.assertEqual(len(usernames), 0, "Usernames were not cleared after game reset")
         self.assertEqual(len(clients), 2, "Clients removed")
 

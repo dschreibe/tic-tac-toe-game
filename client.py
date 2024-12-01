@@ -193,7 +193,7 @@ def connect_to_server():
         while True:
             # Wait for a short time to prevent the input prompt from appearing before the server response
             time.sleep(0.1)
-            message = input("Enter message type (join/move/chat/quit) or 'exit' to disconnect: ")
+            message = input("Enter message type (join/move/chat/reset/quit) or 'exit' to disconnect: ")
             if message.lower() == 'exit':
                 break
 
@@ -224,6 +224,12 @@ def connect_to_server():
                     continue
                 chat_message = input("Enter your message: ")
                 send_message(client_socket, "chat", {"username": current_username, "message": chat_message})
+
+            elif message == "reset":
+                if not current_username:
+                    logging.error("Please join the game first.")
+                    continue
+                send_message(client_socket, "reset", {"username": current_username})
 
             elif message == "quit":
                 if current_username:
