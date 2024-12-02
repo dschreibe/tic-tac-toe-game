@@ -27,6 +27,10 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * Fernet (symmetric encryption)
 * tkinter
 
+**Limitations:**
+* Only supports one game at a time (can have multiple clients connected at once but only one game can be played at a time)
+* Currently there is no checks for if a player "owns" a username and another client could make a move with the same username
+
 **Features**
 
 * State Management:
