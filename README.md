@@ -55,6 +55,11 @@ Displays the board in a 3x3 grid format after each move.
 Shows game results, including the winner or a draw message.
 Provides logs for actions like moves, chat messages, and errors.
 
+**Security/Risk Evaluation**
+
+One of the main issues with the encryption is the possibility of man in the middle attacks. This could be fixed by using a certificate authority. As stated in the limitations, the server also doesn't let clients "own" a username so another client could switch their username and impersonate another user. A future implementation of this game could include safe guards against man in the middle attacks. 
+
+
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
 
