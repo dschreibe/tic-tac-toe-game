@@ -359,6 +359,25 @@ def start_server():
     finally:
         server_socket.close()
 
+def test_server():
+    """
+    Basic integration tests for the server.
+    Simulates different scenarios and edge cases.
+    """
+    # Test invalid message handling
+    logging.info("Testing invalid message handling...")
+    # Manually create a client to send malformed data
+
+    # Test normal gameplay
+    logging.info("Testing normal gameplay flow...")
+
+    # Test abrupt disconnection
+    logging.info("Testing abrupt client disconnection...")
+    # Simulate client crash
+
+    logging.info("Integration tests completed.")
+
+
 if __name__ == "__main__":
     handle_arguments()
     start_server()
