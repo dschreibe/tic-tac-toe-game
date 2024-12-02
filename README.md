@@ -64,6 +64,18 @@ Provides logs for actions like moves, chat messages, and errors.
 One of the main issues with the encryption is the possibility of man in the middle attacks. This could be fixed by using a certificate authority. As stated in the limitations, the server also doesn't let clients "own" a username so another client could switch their username and impersonate another user. A future implementation of this game could include safe guards against man in the middle attacks. There is also no rate limiting on how many messages a client could send to the server which could lead to a denial of service attack with flooding the server with messages.
 
 
+**Brief Roadmap on where we could take project**
+
+If we were to continue this project further, it could continue to evolve in several ways. To start, adding the ability to play multiple games at once would instantly create larger gameplay possibilities.The game’s features could be expanded with the addition of more interactive elements, like player rankings, customizable avatars, or new game modes to increase player engagement. Performance improvements, such as optimizing server load handling to prevent crashes under heavy traffic or adding more robust error handling, would further enhance the player experience. Additionally, adding a matchmaking system for players to find opponents or friends could increase the game's social aspect. Adding more testing to these improvements would also be important as we expand the game. Overall, continuing to add to the game with more options, customability, and features is where this project could lead too. 
+
+**Retrospective**
+
+* What Went Right:
+  Overall, this project has been rather successful. When it comes to development, we were able stay in line and up to date with sprints and improve our game sprint by sprint. Development always stayed on schedule and progress was made increasingly throughout the semester. The vision for the game was also met, we successfully implemented what we set out to create which is always a positive. The communication and teamwork in the team was also a plus, as a team we were able to work together well to create the end product. Finally, we were able to implement the web UI and encryption for extra credit as well.
+
+* What could be improved on:
+   While we are proud and happy with the state of the game in its final form, there are always areas that can be improved. One area is the encryption, as it leaves room for man in the middle attacks. Using a certificate authority would ensure this safety in a more secure way. Another improvement would be in the formatting of our code, as we could have done a better job at making multiple python files to handle messages, overall improving the readability of our code. Finally, the ability to play multiple games at once could be something to add, as we are limited to one right now and that is an improvement that most definetly could add to a better version of the project.
+
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
 
