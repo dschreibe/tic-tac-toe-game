@@ -44,6 +44,10 @@ Displays the board in a 3x3 grid format after each move.
 Shows game results, including the winner or a draw message.
 Provides logs for actions like moves, chat messages, and errors.
 
+**Secuirty/Risk Evaluation**
+
+The game could have several security issues. One major concern is the possibility of attackers intercepting or altering communication between the server and clients, especially if the encryption used for key exchange or message encryption is weak. Players might also send invalid or malicious data that could crash the game or disrupt gameplay. Without proper validation, the game could be vulnerable to exploits, such as bypassing rules or gaining unauthorized access to certain features. Additionally, there’s a risk of Denial of Service (DoS) attacks, where attackers could flood the server with requests, causing it to crash or become unresponsive. Impersonation could also be a problem if there’s no secure player authentication. In a future iteration, these issues could be addressed by implementing stronger encryption methods, more robust input validation, secure authentication processes, and measures to protect against DoS attacks, ensuring better game stability and security.
+
 **Additional resources:**
 * [Socket example](https://www.geeksforgeeks.org/socket-programming-python/)
 
