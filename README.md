@@ -17,6 +17,9 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * Can use only one client to play and switch between users but recommended to use two clients.
 * After game is over, make sure you click "reset" button to pick new usernames!
 
+**Testing**
+* There is a test file that tests a edge cases/basic functionality
+* To run tests `pytest -v test.py`
 
 **Technologies used:**
 * Python
