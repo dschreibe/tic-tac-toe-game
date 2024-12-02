@@ -5,6 +5,7 @@ import json
 import threading
 import time
 from encryption import MessageEncryption, KeyExchange
+from gui_client import start_gui
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -22,6 +23,7 @@ def handle_arguments():
     global PORT
     n = len(sys.argv)
     i = 1
+    use_gui = False
     while i < n:
         arg = sys.argv[i]
         if arg == "-h":
@@ -30,7 +32,11 @@ def handle_arguments():
             print("-i Host-IP      Set the host IP address (required)")
             print("-p Host-Port    Set the host port number (default: 65432)")
             print("-n DNS-Name     Set the DNS name of the server")
+            print("-g              Use GUI interface")
             sys.exit(0)
+        elif arg == "-g":
+            use_gui = True
+            i += 1
         elif arg == "-i":
             if i + 1 < n:
                 HOST = sys.argv[i + 1]
@@ -70,6 +76,8 @@ def handle_arguments():
     if HOST is None:
         print("Error: -i (IP address) is required")
         sys.exit(1)
+    
+    return use_gui
 
 # Sends a message to the server with a specified type and data payload
 def send_message(client_socket, message_type, data):
@@ -249,5 +257,8 @@ def connect_to_server():
 
 # Main entry point for the script: processes command-line arguments and connects to the server
 if __name__ == "__main__":
-    handle_arguments()
-    connect_to_server()
+    use_gui = handle_arguments()
+    if use_gui:
+        start_gui(HOST, PORT)
+    else:
+        connect_to_server()

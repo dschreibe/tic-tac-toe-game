@@ -12,6 +12,11 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 6. Continue game until there is a winner or draw
 7. Once winner or draw is determined new usernames have to be picked!
 
+**How to play (with GUI):**
+* Follow same instructions above but add the -g flag
+* Can use only one client to play and switch between users but recommended to use two clients.
+* After game is over, make sure you click "reset" button to pick new usernames!
+
 
 **Technologies used:**
 * Python
@@ -19,6 +24,12 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * Threading
 * Logging
 * JSON
+* Fernet (symmetric encryption)
+* tkinter
+
+**Limitations:**
+* Only supports one game at a time (can have multiple clients connected at once but only one game can be played at a time)
+* Currently there is no checks for if a player "owns" a username and another client could make a move with the same username
 
 **Features**
 
