@@ -164,13 +164,16 @@ class TicTacToeGUI:
         self.root.quit()
 
     def display_system_message(self, message):
+        # Display system message in chat
         self.chat_text.insert(tk.END, f"System: {message}\n")
         self.chat_text.see(tk.END)
 
     def handle_message(self, message):
+        # Logic of processing json messages
         message_type = message["type"]
         data = message["data"]
         
+        # Handle game updates (who's turn, board state, etc.)
         if message_type == "game_update":
             self.board = data["board"]
             next_turn = data.get("next_turn")
@@ -190,16 +193,18 @@ class TicTacToeGUI:
                 else:
                     self.display_system_message(f"Waiting for {next_turn}'s move...")
 
+        # Handle winning/drawing
         elif message_type == "game_result":
             result = data["result"]
-            self.game_over = True
+            self.game_over = True # Using this to keep game state saves (if over, no more moves sent and force restart)
             if result == "win":
                 self.status_label.config(text=f"Game Over - Winner: {data['winner']}")
                 self.display_system_message(f"Game Over - {data['winner']} wins!")
             elif result == "draw":
                 self.status_label.config(text="Game Over - Draw!")
                 self.display_system_message("Game Over - It's a draw!")
-
+        
+        # These other types of messages are just for logging
         elif message_type == "move_ack":
             logging.info(f"Move acknowledged: {data['message']}")
             self.display_system_message(data['message'])
@@ -216,11 +221,17 @@ class TicTacToeGUI:
             chat_message = data["message"]
             self.chat_text.insert(tk.END, f"{username}: {chat_message}\n")
             self.chat_text.see(tk.END)
+            if " has reset the game! Please rejoin with usernames to start a new game." in chat_message and username == "Server":
+                self.game_over = True
+                self.display_system_message(f"{username} has reset the game! Please click reset to start a new game.")
+                self.status_label.config(text=f"Game Over - The game has been reset the game! Please click reset to start a new game.")
 
     def make_move(self, row, col):
+        # Send move to server
         if not self.connected:
             return
         if self.game_over:
+            # Don't let players make moves after game is over
             self.display_system_message("Game is over. Click Reset to start a new game!")
             return
         logging.info(f"Making move: {row}, {col}")
@@ -238,6 +249,7 @@ class TicTacToeGUI:
             self.chat_entry.delete(0, tk.END)
 
     def clear_board(self):
+        # Clear the board and reset game state
         self.board = [['' for _ in range(3)] for _ in range(3)]
         for i in range(3):
             for j in range(3):
@@ -252,20 +264,15 @@ class TicTacToeGUI:
             self.clear_board()
             self.game_over = False
             # Get new username
-            new_username = simpledialog.askstring("Username", "Enter your username:")
-            if new_username:
-                self.username = new_username
-                self.send_message("join", {"username": self.username})
-                self.display_system_message(f"Rejoining as: {self.username}")
-                self.status_label.config(text=f"Connected to {self.host}:{self.port} as {self.username}")
-            else:
-                self.root.quit()
-                return
+            self.change_username()
         else:
             self.send_message("reset", {"username": self.username})
 
     def change_username(self):
         if not self.connected:
+            return
+        if self.game_over:
+            self.display_system_message("Game is over. Click Reset to start a new game!")
             return
         new_username = simpledialog.askstring("Username", "Enter new username:")
         if new_username:
