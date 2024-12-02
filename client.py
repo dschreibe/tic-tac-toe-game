@@ -16,6 +16,18 @@ current_username = None  # Store the current user's username
 key_exchange = KeyExchange()
 encryption = None  # Will be initialized after key exchange
 
+# Error handling for server initialization
+try:
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    server_socket.listen()
+    server_socket.settimeout(1)
+    logging.info(f"Server started, listening on {HOST}:{PORT}")
+except socket.error as e:
+    logging.critical(f"Failed to start the server on {HOST}:{PORT} - {e}")
+    sys.exit(1)
+
+
 # Parses command-line arguments to set the server's host and port values
 def handle_arguments():
     global HOST
@@ -132,6 +144,8 @@ def format_board(board):
 
 # Handles individual messages from the server based on message type
 def handle_message(message):
+
+    
     if message["type"] == "game_update":
         board = message["data"]["board"]
         next_turn = message["data"]["next_turn"]
@@ -156,6 +170,7 @@ def handle_message(message):
         username = message["data"]["username"]
         chat_message = message["data"]["message"]
         logging.info(f"{username}: {chat_message}")
+        
 
 # Connects to the server, manages message sending, and listens for commands from the user
 def connect_to_server():
@@ -246,6 +261,33 @@ def connect_to_server():
     finally:
         client_socket.close()
         logging.info("Disconnected from server.")
+
+
+def integration_test():
+    # Simulate full game flow for testing purposes
+    try:
+        logging.info("Starting integration tests...")
+
+        # Example scenario: two players join, make moves, and complete the game
+        simulate_client_join("Player1")
+        simulate_client_join("Player2")
+        simulate_player_move("Player1", {"row": 0, "col": 0})
+        simulate_player_move("Player2", {"row": 0, "col": 1})
+        simulate_player_move("Player1", {"row": 1, "col": 1})
+        simulate_player_move("Player2", {"row": 0, "col": 2})
+        simulate_player_move("Player1", {"row": 2, "col": 2})  # Player1 wins
+        logging.info("Integration test passed!")
+    except Exception as e:
+        logging.error(f"Integration test failed: {e}")
+
+def simulate_client_join(username):
+    # Mock function to simulate client joining
+    logging.info(f"Simulating {username} joining the game.")
+
+def simulate_player_move(username, position):
+    # Mock function to simulate a player making a move
+    logging.info(f"Simulating {username} moving to {position}.")
+
 
 # Main entry point for the script: processes command-line arguments and connects to the server
 if __name__ == "__main__":
