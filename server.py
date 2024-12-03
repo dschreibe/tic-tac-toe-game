@@ -35,13 +35,14 @@ def handle_arguments():
     global HOST
     n = len(sys.argv)
     i = 1
+    port_specified = False
     while i < n:
         arg = sys.argv[i]
         if arg == "-h":
             print("Usage:")
             print("-h              Show this help message")
             print("-i Host-IP      Set the host IP address (default: 127.0.0.1)")
-            print("-p Host-Port    Set the host port number (default: 65432)")
+            print("-p Host-Port    Set the host port number (REQUIRED)")
             sys.exit(0)
         elif arg == "-i":
             if i + 1 < n:
@@ -57,6 +58,7 @@ def handle_arguments():
                     port = int(sys.argv[i + 1])
                     if 1 <= port <= 65535:
                         PORT = port
+                        port_specified = True
                     else:
                         print("Error: Port number must be between 1 and 65535")
                         sys.exit(1)
@@ -72,6 +74,11 @@ def handle_arguments():
             print("Use -h for help")
             sys.exit(1)
         i += 1
+
+    if not port_specified:
+        print("Error: Port number (-p) is required")
+        print("Use -h for help")
+        sys.exit(1)
 
 def send_message(conn, message_type, data):
     # Sends a JSON-encoded message to the client.

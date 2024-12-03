@@ -24,19 +24,18 @@ def handle_arguments():
     n = len(sys.argv)
     i = 1
     use_gui = False
+    port_specified = False
     while i < n:
         arg = sys.argv[i]
         if arg == "-h":
             print("Usage:")
             print("-h              Show this help message")
-            print("-i Host-IP      Set the host IP address (required)")
-            print("-p Host-Port    Set the host port number (default: 65432)")
-            print("-n DNS-Name     Set the DNS name of the server")
+            print("-i Host-IP      Set the host IP address (REQUIRED)")
+            print("-p Host-Port    Set the host port number (REQUIRED)")
             print("-g              Use GUI interface")
             sys.exit(0)
         elif arg == "-g":
             use_gui = True
-            i += 1
         elif arg == "-i":
             if i + 1 < n:
                 HOST = sys.argv[i + 1]
@@ -50,6 +49,7 @@ def handle_arguments():
                     port = int(sys.argv[i + 1])
                     if 1 <= port <= 65535:
                         PORT = port
+                        port_specified = True
                     else:
                         print("Error: Port number must be between 1 and 65535")
                         sys.exit(1)
@@ -60,23 +60,21 @@ def handle_arguments():
             else:
                 print("Error: -p requires a port number")
                 sys.exit(1)
-        elif arg == "-n":
-            if i + 1 < n:
-                HOST = sys.argv[i + 1]
-                i += 1
-            else:
-                print("Error: -n requires a DNS name")
-                sys.exit(1)
         else:
             print(f"Error: Unknown argument '{arg}'")
             print("Use -h for help")
             sys.exit(1)
         i += 1
 
+    if not port_specified:
+        print("Error: Port number (-p) is required")
+        print("Use -h for help")
+        sys.exit(1)
+
     if HOST is None:
         print("Error: -i (IP address) is required")
         sys.exit(1)
-    
+
     return use_gui
 
 # Sends a message to the server with a specified type and data payload
