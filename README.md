@@ -13,7 +13,7 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 7. Once winner or draw is determined new usernames have to be picked!
 
 **How to play (with GUI):**
-* Follow same instructions above but add the -g flag
+* Follow same instructions above but add the -g flag to the client
 * Can use only one client to play and switch between users but recommended to use two clients.
 * After game is over, make sure you click "reset" button to pick new usernames!
 
