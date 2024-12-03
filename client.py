@@ -7,8 +7,14 @@ import time
 from encryption import MessageEncryption, KeyExchange
 from gui_client import start_gui
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
-
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler('client.log'),
+        logging.StreamHandler()
+    ]
+)
 HOST = None  # Server's IP address or DNS name
 PORT = 65432  # Port the server is listening on
 current_username = None  # Store the current user's username

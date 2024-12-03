@@ -6,8 +6,14 @@ import json
 from encryption import MessageEncryption, KeyExchange
 import time
 
-# Configure logging to show info-level messages and format them with timestamps
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler('server.log'),
+        logging.StreamHandler()
+    ]
+)
 
 # Default server settings for IP and port
 HOST = '0.0.0.0'  # Listen on all network interfaces

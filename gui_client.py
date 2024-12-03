@@ -6,6 +6,15 @@ import json
 import logging
 from encryption import MessageEncryption, KeyExchange
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler('gui.log'),
+        logging.StreamHandler()
+    ]
+)
+
 class TicTacToeGUI:
     def __init__(self, host, port):
         self.root = tk.Tk()
