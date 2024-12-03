@@ -58,6 +58,7 @@ Displays the board in a 3x3 grid format after each move.
 Shows game results, including the winner or a draw message.
 Provides logs for actions like moves, chat messages, and errors.
 * User Interface (GUI): Option of using a GUI which has same functionality of console based game but with an easier to use user interface.
+* Encrypted messages sent from client and server using key exchange, this ensures no one can capture network packets to see plain text data transmitted. These keys are changed with each new run of the server/client.
 
 **Security/Risk Evaluation**
 
