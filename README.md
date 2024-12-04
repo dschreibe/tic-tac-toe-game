@@ -18,7 +18,7 @@ This is a simple Tic-Tac-Toe game implemented using Python and sockets. The proj
 * After game is over, make sure you click "reset" button to pick new usernames!
 
 **Testing**
-* There is a test file that tests a edge cases/basic functionality
+* There is a test file that tests edge cases/basic functionality
 * To run tests `pytest -v test.py`
 
 **Technologies used:**
